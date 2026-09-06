@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>پنل مدیریت | Tap Coin</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #151b26;
+    --border: #232b3a;
+    --text: #e8eaf0;
+    --muted: #8b93a7;
+    --gold: #f2b705;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 28px; font-size: 14px; }
+
+  #loginBox {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    max-width: 380px;
+    margin: 80px auto;
+    text-align: center;
+  }
+  #loginBox input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0d1117;
+    color: var(--text);
+    font-size: 15px;
+    margin: 16px 0;
+  }
+  #loginBox button, .refreshBtn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #loginBox .err { color: #ff6b6b; font-size: 13px; min-height: 18px; }
+
+  .stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat {
+    flex: 1;
+    min-width: 160px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .stat .num { font-size: 26px; font-weight: 700; color: var(--gold); }
+  .stat .lbl { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 14px; overflow: hidden; }
+  th, td { padding: 12px 14px; text-align: right; font-size: 14px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  td.coins { color: var(--gold); font-weight: 700; }
+  .topbar { display:flex; justify-content: space-between; align-items:center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .refreshBtn { width: auto; padding: 10px 18px; }
+  #app { display: none; }
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+  <h1>ورود به پنل مدیریت</h1>
+  <p class="sub">رمز عبوری که در ADMIN_PASSWORD گذاشتی رو وارد کن</p>
+  <input type="password" id="pw" placeholder="رمز عبور" />
+  <button onclick="login()">ورود</button>
+  <div class="err" id="err"></div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="topbar">
+    <div>
+      <h1>کاربران بازی</h1>
+      <p class="sub" style="margin:0">لیست کاربرا و تعداد سکه‌هاشون</p>
+    </div>
+    <button class="refreshBtn" onclick="loadData()">به‌روزرسانی</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num" id="totalUsers">-</div><div class="lbl">تعداد کاربران</div></div>
+    <div class="stat"><div class="num" id="totalCoins">-</div><div class="lbl">مجموع سکه‌ها</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>نام</th>
+        <th>یوزرنیم</th>
+        <th>آیدی تلگرام</th>
+        <th>لول</th>
+        <th>سکه</th>
+        <th>آخرین بازدید</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script>
+  const API = ""; // اگه پنل روی همون بک‌اند سرو میشه خالی بمونه کافیه
+
+  function getKey() { return sessionStorage.getItem("adminKey") || ""; }
+
+  async function login() {
+    const pw = document.getElementById("pw").value;
+    sessionStorage.setItem("adminKey", pw);
+    const ok = await loadData();
+    if (ok) {
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("app").style.display = "block";
+    } else {
+      document.getElementById("err").textContent = "رمز اشتباهه یا سرور در دسترس نیست";
+    }
+  }
+
+  async function loadData() {
+    try {
+      const headers = { "x-admin-key": getKey() };
+      const [usersRes, statsRes] = await Promise.all([
+        fetch(API + "/api/admin/users", { headers }),
+        fetch(API + "/api/admin/stats", { headers }),
+      ]);
+      if (!usersRes.ok || !statsRes.ok) return false;
+
+      const users = await usersRes.json();
+      const stats = await statsRes.json();
+
+      document.getElementById("totalUsers").textContent = stats.totalUsers.toLocaleString("fa-IR");
+      document.getElementById("totalCoins").textContent = stats.totalCoins.toLocaleString("fa-IR");
+
+      const rows = users
+        .map(
+          (u, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(u.firstName || "-")} ${escapeHtml(u.lastName || "")}</td>
+          <td>${u.username ? "@" + escapeHtml(u.username) : "-"}</td>
+          <td>${escapeHtml(u.telegramId)}</td>
+          <td>${u.level}</td>
+          <td class="coins">${u.coins.toLocaleString("fa-IR")}</td>
+          <td>${new Date(u.lastSeenAt).toLocaleString("fa-IR")}</td>
+        </tr>`
+        )
+        .join("");
+      document.getElementById("rows").innerHTML = rows || `<tr><td colspan="7">هنوز کاربری بازی نکرده</td></tr>`;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // اگه قبلا لاگین کرده بود، مستقیم امتحان کن
+  if (getKey()) {
+    loadData().then((ok) => {
+      if (ok) {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("app").style.display = "block";
+      }
+    });
+  }
+</script>
+</body>
+</html>
